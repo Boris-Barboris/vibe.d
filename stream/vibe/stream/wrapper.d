@@ -12,20 +12,19 @@ public import vibe.core.stream;
 import std.algorithm : min;
 import std.exception;
 import core.time;
-import vibe.internal.interfaceproxy;
 import vibe.internal.freelistref : FreeListRef;
 
 
 ProxyStream createProxyStream(Stream)(Stream stream)
 	if (isStream!Stream)
 {
-	return new ProxyStream(interfaceProxy!(.Stream)(stream), true);
+	return new ProxyStream(stream, true);
 }
 
 ProxyStream createProxyStream(InputStream, OutputStream)(InputStream input, OutputStream output)
 	if (isInputStream!InputStream && isOutputStream!OutputStream)
 {
-	return new ProxyStream(interfaceProxy!(.InputStream)(input), interfaceProxy!(.OutputStream)(output), true);
+	return new ProxyStream(input, output, true);
 }
 
 ConnectionProxyStream createConnectionProxyStream(Stream, ConnectionStream)(Stream stream, ConnectionStream connection_stream)
@@ -33,7 +32,7 @@ ConnectionProxyStream createConnectionProxyStream(Stream, ConnectionStream)(Stre
 {
 	mixin validateStream!Stream;
 	mixin validateConnectionStream!ConnectionStream;
-	return new ConnectionProxyStream(interfaceProxy!(.Stream)(stream), interfaceProxy!(.ConnectionStream)(connection_stream), true);
+	return new ConnectionProxyStream(stream, connection_stream, true);
 }
 
 /// private
@@ -42,13 +41,13 @@ FreeListRef!ConnectionProxyStream createConnectionProxyStreamFL(Stream, Connecti
 {
 	mixin validateStream!Stream;
 	mixin validateConnectionStream!ConnectionStream;
-	return FreeListRef!ConnectionProxyStream(interfaceProxy!(.Stream)(stream), interfaceProxy!(.ConnectionStream)(connection_stream), true);
+	return FreeListRef!ConnectionProxyStream(stream, connection_stream, true);
 }
 
 ConnectionProxyStream createConnectionProxyStream(InputStream, OutputStream, ConnectionStream)(InputStream input, OutputStream output, ConnectionStream connection_stream)
 	if (isInputStream!InputStream && isOutputStream!OutputStream && isConnectionStream!ConnectionStream)
 {
-	return new ConnectionProxyStream(interfaceProxy!(.InputStream)(input), interfaceProxy!(.OutputStream)(output), interfaceProxy!(.ConnectionStream)(connection_stream), true);
+	return new ConnectionProxyStream(input, output, connection_stream, true);
 }
 
 
@@ -58,48 +57,37 @@ ConnectionProxyStream createConnectionProxyStream(InputStream, OutputStream, Con
 class ProxyStream : Stream {
 @safe:
 	private {
-		InterfaceProxy!(.InputStream) m_input;
-		InterfaceProxy!(.OutputStream) m_output;
-		InterfaceProxy!(.Stream) m_underlying;
+		InputStream m_input;
+		OutputStream m_output;
+		Stream m_underlying;
 	}
 
 	deprecated("Use createProxyStream instead.")
 	this(Stream stream = null)
-	{
-		m_underlying = interfaceProxy!Stream(stream);
-		m_input = interfaceProxy!InputStream(stream);
-		m_output = interfaceProxy!OutputStream(stream);
-	}
-
-	deprecated("Use createProxyStream instead.")
-	this(InputStream input, OutputStream output)
-	{
-		m_input = interfaceProxy!InputStream(input);
-		m_output = interfaceProxy!OutputStream(output);
-	}
-
-	/// private
-	this(InterfaceProxy!Stream stream, bool dummy)
 	{
 		m_underlying = stream;
 		m_input = stream;
 		m_output = stream;
 	}
 
+	deprecated("Use createProxyStream instead.")
+	this(InputStream input, OutputStream output)
+	{
+		m_input = input;
+		m_output = output;
+	}
+
 	/// private
-	this(InterfaceProxy!InputStream input, InterfaceProxy!OutputStream output, bool dummy)
+	this(InputStream input, OutputStream output, bool dummy)
 	{
 		m_input = input;
 		m_output = output;
 	}
 
 	/// The stream that is wrapped by this one
-	@property inout(InterfaceProxy!Stream) underlying() inout { return m_underlying; }
+	@property inout(Stream) underlying() inout { return m_underlying; }
 	/// ditto
-	@property void underlying(InterfaceProxy!Stream value) { m_underlying = value; m_input = value; m_output = value; }
-	/// ditto
-	static if (!is(Stream == InterfaceProxy!Stream))
-		@property void underlying(Stream value) { this.underlying = interfaceProxy!Stream(value); }
+	@property void underlying(Stream value) { m_underlying = value; m_input = value; m_output = value; }
 
 	@property bool empty() { return m_input ? m_input.empty : true; }
 
@@ -135,28 +123,28 @@ class ConnectionProxyStream : ConnectionStream {
 @safe:
 
 	private {
-		InterfaceProxy!ConnectionStream m_connection;
-		InterfaceProxy!Stream m_underlying;
-		InterfaceProxy!InputStream m_input;
-		InterfaceProxy!OutputStream m_output;
+		ConnectionStream m_connection;
+		Stream m_underlying;
+		InputStream m_input;
+		OutputStream m_output;
 	}
 
 	deprecated("Use createConnectionProxyStream instead.")
 	this(Stream stream, ConnectionStream connection_stream)
 	{
-		this(interfaceProxy!Stream(stream), interfaceProxy!ConnectionStream(connection_stream), true);
+		this(stream, connection_stream, true);
 	}
 
 	deprecated("Use createConnectionProxyStream instead.")
 	this(InputStream input, OutputStream output, ConnectionStream connection_stream)
 	{
-		this(interfaceProxy!InputStream(input), interfaceProxy!OutputStream(output), interfaceProxy!ConnectionStream(connection_stream), true);
+		this(input, output, connection_stream, true);
 	}
 
 	/// private
-	this(InterfaceProxy!Stream stream, InterfaceProxy!ConnectionStream connection_stream, bool dummy)
+	this(Stream stream, ConnectionStream connection_stream, bool dummy)
 	{
-		assert(!!stream);
+		assert(stream);
 		m_underlying = stream;
 		m_input = stream;
 		m_output = stream;
@@ -164,7 +152,7 @@ class ConnectionProxyStream : ConnectionStream {
 	}
 
 	/// private
-	this(InterfaceProxy!InputStream input, InterfaceProxy!OutputStream output, InterfaceProxy!ConnectionStream connection_stream, bool dummy)
+	this(InputStream input, OutputStream output, ConnectionStream connection_stream, bool dummy)
 	{
 		m_input = input;
 		m_output = output;
@@ -199,12 +187,9 @@ class ConnectionProxyStream : ConnectionStream {
 	}
 
 	/// The stream that is wrapped by this one
-	@property inout(InterfaceProxy!Stream) underlying() inout { return m_underlying; }
+	@property inout(Stream) underlying() inout { return m_underlying; }
 	/// ditto
-	@property void underlying(InterfaceProxy!Stream value) { m_underlying = value; m_input = value; m_output = value; }
-	/// ditto
-	static if (!is(Stream == InterfaceProxy!Stream))
-		@property void underlying(Stream value) { this.underlying = InterfaceProxy!Stream(value); }
+	@property void underlying(Stream value) { m_underlying = value; m_input = value; m_output = value; }
 
 	@property bool empty() { return m_input ? m_input.empty : true; }
 

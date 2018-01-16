@@ -25,7 +25,6 @@ import vibe.stream.zlib;
 import vibe.utils.array;
 import vibe.internal.allocator;
 import vibe.internal.freelistref;
-import vibe.internal.interfaceproxy : InterfaceProxy, interfaceProxy;
 
 import core.exception : AssertError;
 import std.algorithm : splitter;
@@ -301,7 +300,7 @@ final class HTTPClient {
 		ushort m_port;
 		bool m_useTLS;
 		TCPConnection m_conn;
-		InterfaceProxy!Stream m_stream;
+		Stream m_stream;
 		TLSStream m_tlsStream;
 		TLSContext m_tls;
 		static __gshared m_userAgent = "vibe.d/"~vibeVersionString~" (HTTPClient, +http://vibed.org/)";
@@ -339,7 +338,7 @@ final class HTTPClient {
 		assert(!m_conn);
 		assert(port != 0);
 		disconnect();
-		m_conn = TCPConnection.init;
+		m_conn = null;
 		m_settings = settings;
 		m_keepAliveTimeout = settings.defaultKeepAliveTimeout;
 		m_keepAliveLimit = Clock.currTime(UTC()) + m_keepAliveTimeout;
@@ -369,10 +368,10 @@ final class HTTPClient {
 			}
 			if (m_useTLS) {
 				() @trusted { return destroy(m_stream); } ();
-				m_stream = InterfaceProxy!Stream.init;
+				m_stream = null;
 			}
 			() @trusted { return destroy(m_conn); } ();
-			m_conn = TCPConnection.init;
+			m_conn = null;
 		}
 	}
 
@@ -664,7 +663,7 @@ final class HTTPClient {
 */
 final class HTTPClientRequest : HTTPRequest {
 	private {
-		InterfaceProxy!OutputStream m_bodyWriter;
+		OutputStream m_bodyWriter;
 		FreeListRef!ChunkedOutputStream m_chunkedStream;
 		bool m_headerWritten = false;
 		FixedAppender!(string, 22) m_contentLengthBuffer;
@@ -674,7 +673,7 @@ final class HTTPClientRequest : HTTPRequest {
 
 
 	/// private
-	this(InterfaceProxy!Stream conn, TCPConnection raw_conn)
+	this(Stream conn, TCPConnection raw_conn)
 	{
 		super(conn);
 		m_rawConn = raw_conn;
@@ -787,7 +786,7 @@ final class HTTPClientRequest : HTTPRequest {
 		The first retrieval will cause the request header to be written, make sure
 		that all headers are set up in advance.s
 	*/
-	@property InterfaceProxy!OutputStream bodyWriter()
+	@property OutputStream bodyWriter()
 	{
 		if (m_bodyWriter) return m_bodyWriter;
 
@@ -873,7 +872,7 @@ final class HTTPClientResponse : HTTPResponse {
 		FreeListRef!ChunkedInputStream m_chunkedInputStream;
 		FreeListRef!ZlibInputStream m_zlibInputStream;
 		FreeListRef!EndCallbackInputStream m_endCallback;
-		InterfaceProxy!InputStream m_bodyReader;
+		InputStream m_bodyReader;
 		bool m_closeConn;
 		int m_maxRequests;
 	}
@@ -953,7 +952,7 @@ final class HTTPClientResponse : HTTPResponse {
 	/**
 		An input stream suitable for reading the response body.
 	*/
-	@property InterfaceProxy!InputStream bodyReader()
+	@property InputStream bodyReader()
 	{
 		if( m_bodyReader ) return m_bodyReader;
 
@@ -1002,20 +1001,18 @@ final class HTTPClientResponse : HTTPResponse {
 		taken. Failure to read the right amount of data will lead to
 		protocol corruption in later requests.
 	*/
-	void readRawBody(scope void delegate(scope InterfaceProxy!InputStream stream) @safe del)
+	void readRawBody(scope void delegate(scope InputStream stream) @safe del)
 	{
 		assert(!m_bodyReader, "May not mix use of readRawBody and bodyReader.");
-		del(interfaceProxy!InputStream(m_client.m_stream));
+		del(m_client.m_stream);
 		finalize();
 	}
 	/// ditto
-	static if (!is(InputStream == InterfaceProxy!InputStream))
+	static if (!is(InputStream == InputStream))
 	void readRawBody(scope void delegate(scope InputStream stream) @safe del)
 	{
-		import vibe.internal.interfaceproxy : asInterface;
-
 		assert(!m_bodyReader, "May not mix use of readRawBody and bodyReader.");
-		del(m_client.m_stream.asInterface!(.InputStream));
+		del(m_client.m_stream);
 		finalize();
 	}
 

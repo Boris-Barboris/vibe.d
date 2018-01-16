@@ -14,7 +14,6 @@ import vibe.http.server;
 import vibe.inet.message;
 import vibe.inet.mimetypes;
 import vibe.inet.url;
-import vibe.internal.interfaceproxy;
 
 import std.conv;
 import std.datetime;

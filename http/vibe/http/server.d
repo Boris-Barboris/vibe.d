@@ -19,7 +19,6 @@ import vibe.http.log;
 import vibe.inet.message;
 import vibe.inet.url;
 import vibe.inet.webform;
-import vibe.internal.interfaceproxy : InterfaceProxy;
 import vibe.stream.counting;
 import vibe.stream.operations;
 import vibe.stream.tls;
@@ -194,7 +193,7 @@ unittest
 */
 void handleHTTPConnection(TCPConnection connection, HTTPServerContext context)
 @safe {
-	InterfaceProxy!Stream http_stream;
+	Stream http_stream;
 	http_stream = connection;
 
 	scope (exit) connection.close();
@@ -1153,9 +1152,9 @@ final class HTTPServerRequest : HTTPRequest {
 */
 final class HTTPServerResponse : HTTPResponse {
 	private {
-		InterfaceProxy!Stream m_conn;
-		InterfaceProxy!ConnectionStream m_rawConnection;
-		InterfaceProxy!OutputStream m_bodyWriter;
+		Stream m_conn;
+		ConnectionStream m_rawConnection;
+		OutputStream m_bodyWriter;
 		IAllocator m_requestAlloc;
 		FreeListRef!ChunkedOutputStream m_chunkedBodyWriter;
 		FreeListRef!CountingOutputStream m_countingWriter;
@@ -1168,14 +1167,7 @@ final class HTTPServerResponse : HTTPResponse {
 		SysTime m_timeFinalized;
 	}
 
-	static if (!is(Stream == InterfaceProxy!Stream)) {
-		this(Stream conn, ConnectionStream raw_connection, HTTPServerSettings settings, IAllocator req_alloc)
-		@safe {
-			this(InterfaceProxy!Stream(conn), InterfaceProxy!ConnectionStream(raw_connection), settings, req_alloc);
-		}
-	}
-
-	this(InterfaceProxy!Stream conn, InterfaceProxy!ConnectionStream raw_connection, HTTPServerSettings settings, IAllocator req_alloc)
+	this(Stream conn, ConnectionStream raw_connection, HTTPServerSettings settings, IAllocator req_alloc)
 	@safe {
 		m_conn = conn;
 		m_rawConnection = raw_connection;
@@ -1392,7 +1384,7 @@ final class HTTPServerResponse : HTTPResponse {
 		Note that after 'bodyWriter' has been accessed for the first time, it
 		is not allowed to change any header or the status code of the response.
 	*/
-	@property InterfaceProxy!OutputStream bodyWriter()
+	@property OutputStream bodyWriter()
 	@safe {
 		assert(!!m_conn);
 		if (m_bodyWriter) return m_bodyWriter;
@@ -1656,11 +1648,11 @@ final class HTTPServerResponse : HTTPResponse {
 				logDebug("HTTP response only written partially before finalization. Terminating connection.");
 				m_rawConnection.close();
 			}
-			m_rawConnection = InterfaceProxy!ConnectionStream.init;
+			m_rawConnection = null;
 		}
 
 		if (m_conn) {
-			m_conn = InterfaceProxy!Stream.init;
+			m_conn = null;
 			m_timeFinalized = Clock.currTime(UTC());
 		}
 	}
@@ -1907,7 +1899,7 @@ private enum MaxHTTPHeaderLineLength = 4096;
 private final class LimitedHTTPInputStream : LimitedInputStream {
 @safe:
 
-	this(InterfaceProxy!InputStream stream, ulong byte_limit, bool silent_limit = false) {
+	this(InputStream stream, ulong byte_limit, bool silent_limit = false) {
 		super(stream, byte_limit, silent_limit, true);
 	}
 	override void onSizeLimitReached() {
@@ -1921,10 +1913,10 @@ private final class TimeoutHTTPInputStream : InputStream {
 	private {
 		long m_timeref;
 		long m_timeleft;
-		InterfaceProxy!InputStream m_in;
+		InputStream m_in;
 	}
 
-	this(InterfaceProxy!InputStream stream, Duration timeleft, SysTime reftime)
+	this(InputStream stream, Duration timeleft, SysTime reftime)
 	{
 		enforce(timeleft > 0.seconds, "Timeout required");
 		m_in = stream;
@@ -2040,10 +2032,10 @@ private HTTPListener listenHTTPPlain(HTTPServerSettings settings, HTTPServerRequ
 	return HTTPListener(vid);
 }
 
-private alias TLSStreamType = ReturnType!(createTLSStreamFL!(InterfaceProxy!Stream));
+private alias TLSStreamType = ReturnType!(createTLSStreamFL!(Stream));
 
 
-private bool handleRequest(InterfaceProxy!Stream http_stream, TCPConnection tcp_connection, HTTPServerContext listen_info, ref HTTPServerSettings settings, ref bool keep_alive, scope IAllocator request_allocator)
+private bool handleRequest(Stream http_stream, TCPConnection tcp_connection, HTTPServerContext listen_info, ref HTTPServerSettings settings, ref bool keep_alive, scope IAllocator request_allocator)
 @safe {
 	import std.algorithm.searching : canFind;
 
@@ -2073,13 +2065,13 @@ private bool handleRequest(InterfaceProxy!Stream http_stream, TCPConnection tcp_
 	req.m_settings = settings;
 
 	// Create the response object
-	InterfaceProxy!ConnectionStream cproxy = tcp_connection;
+	ConnectionStream cproxy = tcp_connection;
 	auto res = FreeListRef!HTTPServerResponse(http_stream, cproxy, settings, request_allocator/*.Scoped_payload*/);
 	req.tls = res.m_tls = listen_info.tlsContext !is null;
 	if (req.tls) {
 		version (HaveNoTLS) assert(false);
 		else {
-			static if (is(InterfaceProxy!ConnectionStream == ConnectionStream))
+			static if (is(ConnectionStream == ConnectionStream))
 				req.clientCertificate = (cast(TLSStream)http_stream).peerCertificate;
 			else
 				req.clientCertificate = http_stream.extract!TLSStreamType.peerCertificate;
@@ -2118,7 +2110,7 @@ private bool handleRequest(InterfaceProxy!Stream http_stream, TCPConnection tcp_
 		logTrace("reading request..");
 
 		// limit the total request time
-		InterfaceProxy!InputStream reqReader = http_stream;
+		InputStream reqReader = http_stream;
 		if (settings.maxRequestTime > dur!"seconds"(0) && settings.maxRequestTime != Duration.max) {
 			timeout_http_input_stream = FreeListRef!TimeoutHTTPInputStream(reqReader, settings.maxRequestTime, reqtime);
 			reqReader = timeout_http_input_stream;
@@ -2182,7 +2174,7 @@ private bool handleRequest(InterfaceProxy!Stream http_stream, TCPConnection tcp_
 		} else if (auto pt = "Transfer-Encoding" in req.headers) {
 			enforceBadRequest(icmp(*pt, "chunked") == 0);
 			chunked_input_stream = createChunkedInputStreamFL(reqReader);
-			InterfaceProxy!InputStream ciproxy = chunked_input_stream;
+			InputStream ciproxy = chunked_input_stream;
 			limited_http_input_stream = FreeListRef!LimitedHTTPInputStream(ciproxy, settings.maxRequestSize, true);
 		} else {
 			limited_http_input_stream = FreeListRef!LimitedHTTPInputStream(reqReader, 0);

@@ -117,16 +117,15 @@ final class MongoConnection {
 @safe:
 
 	import vibe.stream.wrapper : StreamOutputRange, streamOutputRange;
-	import vibe.internal.interfaceproxy;
 	import vibe.core.stream : InputStream, Stream;
 
 	private {
 		MongoClientSettings m_settings;
 		TCPConnection m_conn;
-		InterfaceProxy!Stream m_stream;
+		Stream m_stream;
 		ulong m_bytesRead;
 		int m_msgid = 1;
-		StreamOutputRange!(InterfaceProxy!Stream) m_outRange;
+		StreamOutputRange!Stream m_outRange;
 	}
 
 	enum ushort defaultPort = MongoClientSettings.defaultPort;
@@ -213,7 +212,7 @@ final class MongoConnection {
 				m_outRange.flush();
 
 				m_stream.finalize();
-				m_stream = InterfaceProxy!Stream.init;
+				m_stream = null;
 			}
 
 			m_conn.close();

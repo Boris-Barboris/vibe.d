@@ -12,7 +12,6 @@ import vibe.http.client;
 import vibe.http.server;
 import vibe.inet.message;
 import vibe.stream.operations;
-import vibe.internal.interfaceproxy : InterfaceProxy;
 
 import std.conv;
 import std.exception;
@@ -197,7 +196,7 @@ HTTPServerRequestDelegateS proxyRequest(HTTPProxySettings settings)
 						res.headers[key] = value;
 				auto size = cres.headers["Content-Length"].to!size_t();
 				if (res.isHeadResponse) res.writeVoidBody();
-				else cres.readRawBody((scope InterfaceProxy!InputStream reader) { res.writeRawBody(reader, size); });
+				else cres.readRawBody((scope InputStream reader) { res.writeRawBody(reader, size); });
 				assert(res.headerWritten);
 				return;
 			}

@@ -12,7 +12,6 @@ import vibe.core.net;
 import vibe.inet.message;
 import vibe.stream.operations;
 import vibe.stream.tls;
-import vibe.internal.interfaceproxy;
 
 import std.algorithm : map, splitter;
 import std.base64;
@@ -134,7 +133,7 @@ void sendMail(in SMTPClientSettings settings, Mail mail)
 	}
 	scope(exit) raw_conn.close();
 
-	InterfaceProxy!Stream conn = raw_conn;
+	Stream conn = raw_conn;
 
 	if( settings.connectionType == SMTPConnectionType.tls ){
 		auto ctx = createTLSContext(TLSContextKind.client, settings.tlsVersion);

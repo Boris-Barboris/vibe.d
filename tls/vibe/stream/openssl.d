@@ -12,7 +12,6 @@ import vibe.core.net;
 import vibe.core.stream;
 import vibe.core.sync;
 import vibe.stream.tls;
-import vibe.internal.interfaceproxy : InterfaceProxy;
 
 import std.algorithm;
 import std.array;
@@ -114,7 +113,7 @@ final class OpenSSLStream : TLSStream {
 @safe:
 
 	private {
-		InterfaceProxy!Stream m_stream;
+		Stream m_stream;
 		TLSContext m_tlsCtx;
 		TLSStreamState m_state;
 		SSLState m_tls;
@@ -124,7 +123,7 @@ final class OpenSSLStream : TLSStream {
 		X509* m_peerCertificate;
 	}
 
-	this(InterfaceProxy!Stream underlying, OpenSSLContext ctx, TLSStreamState state, string peer_name = null, NetworkAddress peer_address = NetworkAddress.init, string[] alpn = null)
+	this(Stream underlying, OpenSSLContext ctx, TLSStreamState state, string peer_name = null, NetworkAddress peer_address = NetworkAddress.init, string[] alpn = null)
 	{
 		m_stream = underlying;
 		m_state = state;
@@ -664,7 +663,7 @@ final class OpenSSLContext : TLSContext {
 		return SSL_TLSEXT_ERR_OK;
 	}
 
-	OpenSSLStream createStream(InterfaceProxy!Stream underlying, TLSStreamState state, string peer_name = null, NetworkAddress peer_address = NetworkAddress.init)
+	OpenSSLStream createStream(Stream underlying, TLSStreamState state, string peer_name = null, NetworkAddress peer_address = NetworkAddress.init)
 	{
 		return new OpenSSLStream(underlying, this, state, peer_name, peer_address);
 	}

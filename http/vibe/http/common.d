@@ -17,7 +17,6 @@ import vibe.textfilter.urlencode : urlEncode, urlDecode;
 import vibe.utils.array;
 import vibe.internal.allocator;
 import vibe.internal.freelistref;
-import vibe.internal.interfaceproxy : InterfaceProxy, interfaceProxy;
 import vibe.utils.string;
 
 import std.algorithm;
@@ -177,7 +176,7 @@ class HTTPRequest {
 	@safe:
 
 	protected {
-		InterfaceProxy!Stream m_conn;
+		Stream m_conn;
 	}
 
 	public {
@@ -202,7 +201,7 @@ class HTTPRequest {
 		InetHeaderMap headers;
 	}
 
-	protected this(InterfaceProxy!Stream conn)
+	protected this(Stream conn)
 	{
 		m_conn = conn;
 	}
@@ -376,20 +375,20 @@ final class ChunkedInputStream : InputStream
 	@safe:
 
 	private {
-		InterfaceProxy!InputStream m_in;
+		InputStream m_in;
 		ulong m_bytesInCurrentChunk = 0;
 	}
 
 	deprecated("Use createChunkedInputStream() instead.")
 	this(InputStream stream)
 	{
-		this(interfaceProxy!InputStream(stream), true);
+		this(stream, true);
 	}
 
 	/// private
-	this(InterfaceProxy!InputStream stream, bool dummy)
+	this(InputStream stream, bool dummy)
 	{
-		assert(!!stream);
+		assert(stream);
 		m_in = stream;
 		readChunk();
 	}
@@ -459,13 +458,13 @@ final class ChunkedInputStream : InputStream
 /// Creates a new `ChunkedInputStream` instance.
 ChunkedInputStream chunkedInputStream(IS)(IS source_stream) if (isInputStream!IS)
 {
-	return new ChunkedInputStream(interfaceProxy!InputStream(source_stream), true);
+	return new ChunkedInputStream(source_stream, true);
 }
 
 /// Creates a new `ChunkedInputStream` instance.
 FreeListRef!ChunkedInputStream createChunkedInputStreamFL(IS)(IS source_stream) if (isInputStream!IS)
 {
-	return () @trusted { return FreeListRef!ChunkedInputStream(interfaceProxy!InputStream(source_stream), true); } ();
+	return () @trusted { return FreeListRef!ChunkedInputStream(source_stream, true); } ();
 }
 
 
@@ -477,7 +476,7 @@ final class ChunkedOutputStream : OutputStream {
 
 	alias ChunkExtensionCallback = string delegate(in ubyte[] data);
 	private {
-		InterfaceProxy!OutputStream m_out;
+		OutputStream m_out;
 		AllocAppender!(ubyte[]) m_buffer;
 		size_t m_maxBufferSize = 4*1024;
 		bool m_finalized = false;
@@ -487,11 +486,11 @@ final class ChunkedOutputStream : OutputStream {
 	deprecated("Use createChunkedOutputStream() instead.")
 	this(OutputStream stream, IAllocator alloc = theAllocator())
 	{
-		this(interfaceProxy!OutputStream(stream), alloc, true);
+		this(stream, alloc, true);
 	}
 
 	/// private
-	this(InterfaceProxy!OutputStream stream, IAllocator alloc, bool dummy)
+	this(OutputStream stream, IAllocator alloc, bool dummy)
 	{
 		m_out = stream;
 		m_buffer = AllocAppender!(ubyte[])(alloc);
@@ -609,13 +608,13 @@ final class ChunkedOutputStream : OutputStream {
 /// Creates a new `ChunkedInputStream` instance.
 ChunkedOutputStream createChunkedOutputStream(OS)(OS destination_stream, IAllocator allocator = theAllocator()) if (isOutputStream!OS)
 {
-	return new ChunkedOutputStream(interfaceProxy!OutputStream(destination_stream), allocator, true);
+	return new ChunkedOutputStream(destination_stream, allocator, true);
 }
 
 /// Creates a new `ChunkedOutputStream` instance.
 FreeListRef!ChunkedOutputStream createChunkedOutputStreamFL(OS)(OS destination_stream, IAllocator allocator = theAllocator()) if (isOutputStream!OS)
 {
-	return FreeListRef!ChunkedOutputStream(interfaceProxy!OutputStream(destination_stream), allocator, true);
+	return FreeListRef!ChunkedOutputStream(destination_stream, allocator, true);
 }
 
 
