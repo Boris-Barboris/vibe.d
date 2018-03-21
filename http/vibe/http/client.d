@@ -615,6 +615,7 @@ final class HTTPClient {
 				}
 			}
 
+			m_conn.readTimeout = seconds(10);
 			m_stream = m_conn;
 			if (m_useTLS) {
 				try m_tlsStream = createTLSStream(m_conn, m_tls, TLSStreamState.connecting, m_server, m_conn.remoteAddress);
