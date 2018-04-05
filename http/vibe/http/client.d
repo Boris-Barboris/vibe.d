@@ -524,8 +524,15 @@ final class HTTPClient {
 		 	connected_time = Clock.currTime(UTC());
 
 			close_conn = false;
-			has_body = doRequest(requester, close_conn, false, connected_time);
-
+			try
+			{
+				has_body = doRequest(requester, close_conn, false, connected_time);
+			}
+			catch (SocketException ex)
+			{
+				logTrace("HTTP doRequest failed with SocketException: %s", ex.msg);
+				disconnect();
+			}
 			logTrace("HTTP client waiting for response");
 			if (!m_stream.empty) break;
 
