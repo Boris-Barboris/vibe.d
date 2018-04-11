@@ -2160,7 +2160,7 @@ string convertJsonToASCII(string json)
 
 
 /// private
-private void jsonEscape(bool escape_unicode = false, R)(ref R dst, string s)
+void jsonEscape(bool escape_unicode = false, R)(ref R dst, string s)
 {
 	size_t startPos = 0;
 
