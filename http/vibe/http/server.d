@@ -1275,14 +1275,14 @@ final class HTTPServerResponse : HTTPResponse {
 		m_countingWriter.increment(bytes);
 	}
 	/// ditto
-	void writeRawBody(InputStream)(InputStream stream, size_t num_bytes = 0) @safe
+	void writeRawBody(InputStream)(InputStream stream, ulong num_bytes = ulong.max) @safe
 		if (isInputStream!InputStream && !isRandomAccessStream!InputStream)
 	{
 		assert(!m_headerWritten, "A body was already written!");
 		writeHeader();
 		if (m_isHeadResponse) return;
 
-		if (num_bytes > 0) {
+		if (num_bytes != ulong.max) {
 			stream.pipe(m_conn, num_bytes);
 			m_countingWriter.increment(num_bytes);
 		} else stream.pipe(m_countingWriter, num_bytes);
@@ -1295,7 +1295,7 @@ final class HTTPServerResponse : HTTPResponse {
 		writeRawBody(stream);
 	}
 	/// ditto
-	void writeRawBody(InputStream)(InputStream stream, int status, size_t num_bytes = 0) @safe
+	void writeRawBody(InputStream)(InputStream stream, int status, ulong num_bytes = ulong.max) @safe
 		if (isInputStream!InputStream && !isRandomAccessStream!InputStream)
 	{
 		statusCode = status;
