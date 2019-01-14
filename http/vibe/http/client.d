@@ -100,10 +100,10 @@ HTTPClientResponse requestHTTP(URL url, scope void delegate(scope HTTPClientRequ
 	auto res = cli.request((req){
 			if (url.localURI.length) {
 				assert(url.path.absolute, "Request URL path must be absolute.");
-				req.requestURL = url.localURI ~ req.requestURI;
+				req.requestURL = url.localURI;
 			}
 			if (settings.proxyURL.schema !is null)
-				req.requestURL = url.toString() ~ req.requestURI; // proxy exception to the URL representation
+				req.requestURL = url.toString(); // proxy exception to the URL representation
 
 			// Provide port number when it is not the default one (RFC2616 section 14.23)
 			if (url.port && url.port != url.defaultPort)
