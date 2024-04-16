@@ -476,7 +476,7 @@ final class HTTPClient {
 			}
 			try responder(res);
 			catch (Exception e) {
-				logDebug("Error while handling response: %s", e.toString().sanitize());
+				logDebug("Error while handling response");
 				user_exception = e;
 			}
 			if (m_responding) {
